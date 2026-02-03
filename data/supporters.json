@@ -1,0 +1,12 @@
+[
+  {
+    "nameAr": "شركة المثال الأولى",
+    "nameEn": "Example Company One",
+    "logo": "/supporters/company1.png"
+  },
+  {
+    "nameAr": "شركة المثال الثانية",
+    "nameEn": "Example Company Two",
+    "logo": "/supporters/company2.png"
+  }
+]
