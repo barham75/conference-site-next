@@ -27,7 +27,6 @@ export default function RegisterPage() {
       setMsg({ type: "err", text: "يرجى إدخال الاسم." });
       return;
     }
-
     if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setMsg({ type: "err", text: "يرجى إدخال بريد إلكتروني صحيح." });
       return;
@@ -38,7 +37,6 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // ✅ مهم لضمان حفظ الكوكي
         body: JSON.stringify({
           full_name: cleanName,
           email: cleanEmail,
@@ -57,10 +55,11 @@ export default function RegisterPage() {
         return;
       }
 
-      setMsg({ type: "ok", text: "تم التسجيل بنجاح ✅" });
+      setMsg({ type: "ok", text: "تم التسجيل بنجاح ✅ سيتم تحويلك للرئيسية..." });
 
-      // ✅ توجيه للصفحة الرئيسية
+      // مهم: بعد نجاح التسجيل → روح للصفحة الرئيسية /
       router.replace("/");
+      router.refresh();
     } catch {
       setMsg({ type: "err", text: "تعذر الاتصال بالسيرفر." });
     } finally {
