@@ -1,145 +1,42 @@
-"use client";
+import { NextResponse } from "next/server";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyN-Yrs5f-fTfVt9DRDymmbMb9a1AaH3CENBAj20Vo53ntbmzlhUc97lZYbQHdyDfS3hg/exec";
 
-export default function RegisterPage() {
-  const router = useRouter();
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [university, setUniversity] = useState("");
+    const payload = {
+      fullName: body.full_name,
+      email: body.email,
+      phone: body.phone,
+      university: body.university,
+    };
 
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+    const r = await fetch(GOOGLE_SHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg(null);
-
-    const cleanName = fullName.trim();
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (!cleanName) {
-      setMsg({ type: "err", text: "يرجى إدخال الاسم." });
-      return;
-    }
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setMsg({ type: "err", text: "يرجى إدخال بريد إلكتروني صحيح." });
-      return;
+    if (!r.ok) {
+      throw new Error("Failed to save to Google Sheets");
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: cleanName,
-          email: cleanEmail,
-          phone: phone.trim(),
-          university: university.trim(),
-        }),
-      });
+    const res = NextResponse.json({ ok: true });
 
-      const data = await res.json().catch(() => ({}));
+    // Cookie للدخول
+    const cookieValue = Buffer.from(JSON.stringify(payload)).toString("base64");
+    res.headers.append(
+      "Set-Cookie",
+      `conf_user=${cookieValue}; Path=/; Max-Age=2592000; SameSite=Lax`
+    );
 
-      if (!res.ok || !data?.ok) {
-        setMsg({ type: "err", text: data?.error || "حدث خطأ أثناء التسجيل." });
-        return;
-      }
-
-      setMsg({ type: "ok", text: "تم التسجيل بنجاح ✅ يتم تحويلك للرئيسية..." });
-
-      // مهم: بعد نجاح التسجيل (والكوكي تم وضعها من السيرفر) → روح للرئيسية
-      router.replace("/");
-      router.refresh();
-    } catch {
-      setMsg({ type: "err", text: "تعذر الاتصال بالسيرفر." });
-    } finally {
-      setLoading(false);
-    }
+    return res;
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e.message },
+      { status: 500 }
+    );
   }
-
-  return (
-    <main style={{ maxWidth: 520, margin: "40px auto", padding: "0 16px" }}>
-      <h1 style={{ textAlign: "center", marginBottom: 18 }}>التسجيل</h1>
-
-      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>الاسم الكامل *</span>
-          <input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="اكتب الاسم"
-            style={inputStyle}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>البريد الإلكتروني *</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@example.com"
-            style={inputStyle}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>رقم الهاتف</span>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="07xxxxxxxx"
-            style={inputStyle}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>الجامعة / المؤسسة</span>
-          <input
-            value={university}
-            onChange={(e) => setUniversity(e.target.value)}
-            placeholder="مثال: جامعة جرش"
-            style={inputStyle}
-          />
-        </label>
-
-        <button type="submit" disabled={loading} style={buttonStyle}>
-          {loading ? "جارٍ الحفظ..." : "دخول"}
-        </button>
-
-        {msg && (
-          <div
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: msg.type === "ok" ? "#e7f8ee" : "#fdecec",
-              border: "1px solid rgba(0,0,0,0.08)",
-            }}
-          >
-            {msg.text}
-          </div>
-        )}
-      </form>
-    </main>
-  );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(0,0,0,0.2)",
-  outline: "none",
-  fontSize: 14,
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "none",
-  cursor: "pointer",
-  fontSize: 15,
-};
